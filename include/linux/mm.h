@@ -2883,6 +2883,6 @@ extern void record_memsize_reserved(const char *name, phys_addr_t base,
 				    phys_addr_t size, bool nomap,
 				    bool reusable);
 extern void record_memsize_memory_hole(void);
-extern inline bool need_memory_boosting(void);
+extern bool need_memory_boosting(void);
 #endif /* __KERNEL__ */
 #endif /* _LINUX_MM_H */
