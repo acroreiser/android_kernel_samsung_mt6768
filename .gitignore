@@ -78,6 +78,11 @@ modules.builtin
 !.cocciconfig
 
 #
+# ignore out folder
+#
+out/
+
+#
 # Generated include files
 #
 include/config
