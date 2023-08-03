@@ -4,7 +4,7 @@
 # Copyright (C) 2020-2023 Adithya R.
 
 SECONDS=0 # builtin bash timer
-ZIPNAME="/tmp/output/SunriseKernel-RC1-A315F_$(date +%Y%m%d-%H%M).zip"
+ZIPNAME="/tmp/output/SunriseKernel-Milestone-1-A315F_$(date +%Y%m%d-%H%M).zip"
 TC_DIR="$HOME/tc/clang"
 GCC_DIR="$HOME/tc/gcc"
 GCC64_DIR="$HOME/tc/gcc64"
@@ -16,7 +16,7 @@ mkdir -p /tmp/output
 
 env() {
 export TELEGRAM_BOT_TOKEN=""
-export TELEGRAM_CHAT_ID="@SunriseCI"
+export TELEGRAM_CHAT_ID=""
 
 TRIGGER_SHA="$(git rev-parse HEAD)"
 LATEST_COMMIT="$(git log --pretty=format:'%s' -1)"
