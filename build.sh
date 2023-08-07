@@ -1,16 +1,8 @@
-#!/bin/bash
-#
-# Compile script for CollapseKernel.
-# Copyright (C) 2020-2023 Adithya R.
-
 SECONDS=0 # builtin bash timer
 ZIPNAME="/tmp/output/SunriseKernel-Milestone-1-A315F_$(date +%Y%m%d-%H%M).zip"
-TC_DIR="$HOME/tc/clang"
-GCC_DIR="$HOME/tc/gcc"
-GCC64_DIR="$HOME/tc/gcc64"
-DTC_DIR="$HOME/tc/dtc"
 AK3_DIR="$HOME/android/AnyKernel3"
-DEFCONFIG="a31_defconfig"
+
+sudo apt install glibc-source bc zstd -y
 
 mkdir -p /tmp/output
 
@@ -31,74 +23,82 @@ export FILE_CAPTION="
 👩‍💻 Commit author: $COMMIT_BY"
 }
 
-export PATH="${TC_DIR}/bin:${GCC64_DIR}/bin:${GCC_DIR}/bin:/usr/bin:${PATH}"
-export DTC_EXT="${DTC_DIR}/linux-x86/dtc/dtc"
+# Number of jobs to run.
+PROCS=$(nproc --all)
+export PROCS
 
-if ! [ -d "$TC_DIR" ]; then
-echo "clang not found! Cloning to $TC_DIR..."
-if ! git clone -q -b master --depth=1 https://github.com/kdrag0n/proton-clang $TC_DIR; then
-echo "Cloning failed! Aborting..."
-exit 1
-fi
-fi
+# Default defconfig to use for builds.
+export CONFIG=a31_defconfig
 
-if ! [ -d "$GCC_DIR" ]; then
-echo "GCC not found! Cloning to $GCC_DIR..."
-if ! git clone -q -b master --depth=1 https://github.com/Enprytna/arm-linux-androideabi-4.9 $GCC_DIR; then
-echo "Cloning failed! Aborting..."
-exit 1
-fi
-fi
+# Default directory where kernel is located in.
+KDIR=$(pwd)
+export KDIR
 
-if ! [ -d "$GCC64_DIR" ]; then
-echo "GCC64 not found! Cloning to $GCC64_DIR..."
-if ! git clone -q -b master --depth=1 https://github.com/Enprytna/aarch64-linux-android-4.9 $GCC64_DIR; then
-echo "Cloning failed! Aborting..."
-exit 1
-fi
-fi
+# Default linker to use for builds.
+export LINKER="ld.lld"
 
-if ! [ -d "$DTC_DIR" ]; then
-echo "DTC not found! Cloning to $DTC_DIR..."
-if ! git clone -q -b android12-gsi --depth=1 https://android.googlesource.com/platform/prebuilts/misc $DTC_DIR; then
-echo "Cloning failed! Aborting..."
-exit 1
+# Compiler to use for builds.
+export COMPILER=clang
+
+if [[ "${COMPILER}" == gcc ]]; then
+    if [ ! -d "${KDIR}/gcc64" ]; then
+        curl -sL https://github.com/cyberknight777/gcc-arm64/archive/refs/heads/master.tar.gz | tar -xzf -
+        mv "${KDIR}"/gcc-arm64-master "${KDIR}"/gcc64
+    fi
+
+    if [ ! -d "${KDIR}/gcc32" ]; then
+	curl -sL https://github.com/cyberknight777/gcc-arm/archive/refs/heads/master.tar.gz | tar -xzf -
+        mv "${KDIR}"/gcc-arm-master "${KDIR}"/gcc32
+    fi
+
+    KBUILD_COMPILER_STRING=$("${KDIR}"/gcc64/bin/aarch64-elf-gcc --version | head -n 1)
+    export KBUILD_COMPILER_STRING
+    export PATH="${KDIR}"/gcc32/bin:"${KDIR}"/gcc64/bin:/usr/bin/:${PATH}
+    MAKE+=(
+        ARCH=arm64
+        O=out
+        CROSS_COMPILE=aarch64-elf-
+        CROSS_COMPILE_ARM32=arm-eabi-
+        LD="${KDIR}"/gcc64/bin/aarch64-elf-"${LINKER}"
+        AR=aarch64-elf-ar
+        AS=aarch64-elf-as
+        NM=aarch64-elf-nm
+        OBJDUMP=aarch64-elf-objdump
+        OBJCOPY=aarch64-elf-objcopy
+        CC=aarch64-elf-gcc
+    )
+
+elif [[ "${COMPILER}" == clang ]]; then
+    if [ ! -d "${KDIR}/clang" ]; then
+        mkdir clang
+        wget https://github.com/Neutron-Toolchains/clang-build-catalogue/releases/download/29072023/neutron-clang-29072023.tar.zst
+        tar -I zstd -xvf "${KDIR}"/neutron-clang-29072023.tar.zst --directory clang
+    fi
+
+    KBUILD_COMPILER_STRING=$("${KDIR}"/clang/bin/clang -v 2>&1 | head -n 1 | sed 's/(https..*//' | sed 's/ version//')
+    export KBUILD_COMPILER_STRING
+    export PATH=$KDIR/clang/bin/:/usr/bin/:${PATH}
+    MAKE+=(
+        ARCH=arm64
+        O=$(pwd)/out
+        KCFLAGS=-w
+        CROSS_COMPILE=aarch64-linux-gnu-
+        CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+        LD="${LINKER}"
+        AR=llvm-ar
+        AS=llvm-as
+        NM=llvm-nm
+        OBJDUMP=llvm-objdump
+        STRIP=llvm-strip
+        CC=clang
+    )
 fi
-fi
-
-export KBUILD_BUILD_USER=Collapse
-export KBUILD_BUILD_HOST=Instance
-
-if [[ $1 = "-r" || $1 = "--regen" ]]; then
-make O=out ARCH=arm64 $DEFCONFIG savedefconfig
-cp out/defconfig arch/arm64/configs/$DEFCONFIG
-exit
-fi
-
-if [[ $1 = "-c" || $1 = "--clean" ]]; then
-rm -rf out
-fi
-
-mkdir -p out
-make O=out ARCH=arm64 $DEFCONFIG
-
-echo -e "\nStarting compilation...\n"
-make -j$(nproc --all) O=out ARCH=arm64 \
-    CC=clang \
-    LD=ld.lld \
-    AR=llvm-ar \
-    AS=llvm-as \
-    NM=llvm-nm \
-    OBJCOPY=llvm-objcopy \
-    OBJDUMP=llvm-objdump \
-    STRIP=llvm-strip \
-    CROSS_COMPILE=aarch64-linux-android- \
-    CROSS_COMPILE_ARM32=arm-linux-androideabi- \
-    CLANG_TRIPLE=aarch64-linux-gnu-
+make "${MAKE[@]}" $CONFIG
+time make -j"$PROCS" "${MAKE[@]}" Image 2>&1 | tee log.txt
 
 env
 
-if [ -f "out/arch/arm64/boot/Image.gz" ]; then
+if [ -f "out/arch/arm64/boot/Image" ]; then
 echo -e "\nKernel compiled succesfully! Zipping up...\n"
 if [ -d "$AK3_DIR" ]; then
 cp -r $AK3_DIR AnyKernel3
@@ -106,7 +106,7 @@ elif ! git clone -q https://github.com/ShelbyHell/AnyKernel3 -b a31; then
 echo -e "\nAnyKernel3 repo not found locally and cloning failed! Aborting..."
 exit 1
 fi
-cp out/arch/arm64/boot/Image.gz AnyKernel3
+cp out/arch/arm64/boot/Image AnyKernel3
 rm -f *zip
 cd AnyKernel3
 git checkout a31 &> /dev/null
@@ -117,7 +117,7 @@ rm -rf out/arch/arm64/boot
 echo -e "\nCompleted in $((SECONDS / 60)) minute(s) and $((SECONDS % 60)) second(s) !"
 echo "Zip: $ZIPNAME"
 if ! [[ $HOSTNAME = "enprytna" && $USER = "endi" ]]; then
-curl -F document=@"${ZIPNAME}" -F "caption=${FILE_CAPTION}" "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument?chat_id=${TELEGRAM_CHAT_ID}&parse_mode=Markdown"
+curl -F document=@"${ZIPNAME}" -F "caption=${FILE_CAPTION}" "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument?chat_id=${TELEGRAM_CHAT_ID}&parse_mode=html"
 fi
 else
 echo -e "\nCompilation failed!"
