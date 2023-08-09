@@ -27,8 +27,8 @@
 #include <linux/math64.h>	/* for __iter_div_u64_rem()		*/
 #include <uapi/linux/time.h>	/* for struct timespec			*/
 
-#include "compiler.h"
-#include "datapage.h"
+#include "../arch/arm64/kernel/vdso/compiler.h"
+#include "../arch/arm64/kernel/vdso/datapage.h"
 
 #ifdef ARCH_PROVIDES_TIMER
 DEFINE_FALLBACK(gettimeofday, struct timeval *, tv, struct timezone *, tz)
