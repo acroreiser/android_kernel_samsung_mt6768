@@ -130,7 +130,7 @@ LD		+= -EL
 ifeq ($(ld-name),gold)
 LDFLAGS		+= -maarch64_elf64_le_vec
 else
-LDFLAGS		+= -maarch64elf
+LDFLAGS		+= -maarch64linux
 endif
 UTS_MACHINE	:= aarch64
 endif
