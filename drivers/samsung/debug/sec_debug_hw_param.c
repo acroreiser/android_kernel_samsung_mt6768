@@ -77,7 +77,7 @@ static int __init sec_hw_param_get_dram_info(char *arg)
 	unsigned long dram_RevID1, dram_RevID2, dram_size;
 	int ret;
 
-	ret = sscanf(arg, "%lx,%lx,%lx,%d", &dram_VendorID, &dram_RevID1, &dram_RevID2, &dram_size);
+	ret = sscanf(arg, "%lx,%lx,%lx,%lu", &dram_VendorID, &dram_RevID1, &dram_RevID2, &dram_size);
 
 	if (ret != 4) {
 		pr_notice("%s: It need to check DRAM Info. (ret=%d, arg=%s)\n", __func__, ret, arg);

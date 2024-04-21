@@ -25,7 +25,7 @@ static ssize_t sec_debug_hist_hist_read(struct file *file, char __user *buf,
 	char *base = NULL;
 
 	if (pos >= dhist_size) {
-		pr_crit("%s: pos %llx , dhist: %lx\n", __func__, pos, dhist_size);
+		pr_crit("%s: pos %llx , dhist: %u\n", __func__, pos, dhist_size);
 
 		ret = 0;
 
@@ -36,7 +36,7 @@ static ssize_t sec_debug_hist_hist_read(struct file *file, char __user *buf,
 
 	base = (char *)phys_to_virt((phys_addr_t)dhist_base);
 	if (!base) {
-		pr_crit("%s: fail to get va (%lx)\n", __func__, dhist_base);
+		pr_crit("%s: fail to get va (%u)\n", __func__, dhist_base);
 
 		ret = -EFAULT;
 
@@ -70,7 +70,7 @@ static int __init sec_debug_hist_late_init(void)
 
 	base = (char *)phys_to_virt((phys_addr_t)dhist_base);
 
-	pr_info("%s: base: %p(%lx) size: %lx\n", __func__, base, dhist_base, dhist_size);
+	pr_info("%s: base: %p(%u) size: %u\n", __func__, base, dhist_base, dhist_size);
 
 	if (!dhist_base || !dhist_size)
 		return 0;
